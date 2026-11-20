@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ==================================================
-echo   OPERATION: CIPHER v2.2.1 - Safe Shutdown
+echo   OPERATION: CIPHER v2.2.8 - Safe Shutdown
 echo ==================================================
 
 if not exist ".cipher-server.pid" (
