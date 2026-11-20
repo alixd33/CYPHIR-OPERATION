@@ -13,6 +13,7 @@ import { drawWallTile, drawDoorFrame, isWallTile } from './wallSystem.js';
 import { TILE_SIZE } from '../domain/worldConfig.js';
 import { getPropCollisionBox } from '../engines/pathfinding.js';
 import { findOpaqueBounds, fitSpriteIntoBox } from './spriteGeometry.js';
+import { drawFloorDetails } from './floorDetails.js';
 
 export class SceneRenderer {
   constructor(canvas, explorationEngine, pauseManager, appearance, campaignState, onInteractPromptChange, onTriggerInteract, onPathError, onZoomChange) {
@@ -41,6 +42,7 @@ export class SceneRenderer {
 
     this.ambientState = new Map();
     this.propBoundsCache = new Map();
+    this.floorDetailCache = new WeakMap();
 
     this.images = {
       tiles: new Image(),
@@ -245,6 +247,34 @@ export class SceneRenderer {
     this.camera.y = Math.max(0, Math.min(maxY, targetY));
   }
 
+  _getFloorDetailLayer(scene, tileSize) {
+    if (!scene || typeof scene !== 'object') return null;
+    let cache = this.floorDetailCache.get(scene);
+    if (!cache) {
+      cache = new Map();
+      this.floorDetailCache.set(scene, cache);
+    }
+    if (cache.has(tileSize)) return cache.get(tileSize);
+
+    try {
+      const layer = document.createElement('canvas');
+      layer.width = scene.width * tileSize;
+      layer.height = scene.height * tileSize;
+      const layerCtx = layer.getContext('2d');
+      if (!layerCtx) {
+        cache.set(tileSize, null);
+        return null;
+      }
+      layerCtx.imageSmoothingEnabled = false;
+      drawFloorDetails(layerCtx, scene, tileSize);
+      cache.set(tileSize, layer);
+      return layer;
+    } catch {
+      cache.set(tileSize, null);
+      return null;
+    }
+  }
+
   _getPropOpaqueBounds(col, row) {
     const key = `${col},${row}`;
     if (this.propBoundsCache.has(key)) return this.propBoundsCache.get(key);
@@ -318,6 +348,9 @@ export class SceneRenderer {
       }
     }
 
+    const floorDetailLayer = this._getFloorDetailLayer(scene, tileSize);
+    if (floorDetailLayer) ctx.drawImage(floorDetailLayer, 0, 0);
+
     // 1b. Handcrafted Floor Accents (Atrium Ceremonial Rug)
     if (scene.id === 'cipher_hq') {
       ctx.save();
@@ -347,6 +380,24 @@ export class SceneRenderer {
       ctx.restore();
     }
 
+
+    // Floor lighting: render before architecture and actors so light stays on the ground.
+    ctx.save();
+    if (scene.id === 'cipher_hq') {
+      this._drawLightPool(ctx, 41 * tileSize, 5 * tileSize, 130, 'rgba(230, 189, 120, 0.16)');
+      this._drawLightPool(ctx, 35 * tileSize, 22 * tileSize, 170, 'rgba(230, 189, 120, 0.11)');
+      this._drawLightPool(ctx, 11 * tileSize, 7 * tileSize, 140, 'rgba(57, 139, 130, 0.16)');
+      this._drawLightPool(ctx, 59 * tileSize, 7 * tileSize, 140, 'rgba(167, 195, 186, 0.13)');
+      this._drawLightPool(ctx, 58 * tileSize, 23 * tileSize, 120, 'rgba(230, 189, 120, 0.11)');
+      this._drawLightPool(ctx, 24 * tileSize, 34 * tileSize, 130, 'rgba(230, 189, 120, 0.15)');
+      this._drawLightPool(ctx, 60 * tileSize, 39 * tileSize, 130, 'rgba(230, 189, 120, 0.12)');
+    } else if (scene.id === 'server_room_7') {
+      this._drawLightPool(ctx, 23 * tileSize, 5 * tileSize, 150, 'rgba(57, 139, 130, 0.16)');
+      this._drawLightPool(ctx, 16 * tileSize, 11 * tileSize, 100, 'rgba(230, 189, 120, 0.12)');
+      this._drawLightPool(ctx, 23 * tileSize, 26 * tileSize, 95, 'rgba(198, 106, 76, 0.14)');
+    }
+    ctx.restore();
+
     // 1c. Background Wall Pass
     const p = this.exploration.player;
     const playerFootRow = Math.floor((p.y + 26) / tileSize);
@@ -374,7 +425,26 @@ export class SceneRenderer {
       const dy = door.y * tileSize;
       if (st === 'closed' || st === 'locked') {
         if (this.images.props.complete) {
-          ctx.drawImage(this.images.props, 0, 2 * 64, 64, 64, dx - 4, dy - 16, 40, 44);
+          const opaque = this._getPropOpaqueBounds(0, 2);
+          const fitted = fitSpriteIntoBox(opaque, {
+            centerX: dx + 16,
+            bottomY: dy + 28,
+            width: 40,
+            height: 44,
+          });
+          if (fitted) {
+            ctx.drawImage(
+              this.images.props,
+              fitted.sx,
+              2 * 64 + fitted.sy,
+              fitted.sw,
+              fitted.sh,
+              fitted.dx,
+              fitted.dy,
+              fitted.dw,
+              fitted.dh
+            );
+          }
         }
         ctx.fillStyle = st === 'locked' ? '#B85C55' : '#D18A48';
         ctx.fillRect(dx + 12, dy + 4, 4, 4);
@@ -508,23 +578,6 @@ export class SceneRenderer {
       drawWallTile(ctx, scene.grid, fw.x, fw.y, scene.id, tsMs);
       ctx.restore();
     }
-
-    // 5c. Localized Radial Lighting Pools
-    ctx.save();
-    if (scene.id === 'cipher_hq') {
-      this._drawLightPool(ctx, 41 * tileSize, 5 * tileSize, 130, 'rgba(230, 189, 120, 0.16)');
-      this._drawLightPool(ctx, 35 * tileSize, 22 * tileSize, 170, 'rgba(230, 189, 120, 0.11)');
-      this._drawLightPool(ctx, 11 * tileSize, 7 * tileSize, 140, 'rgba(57, 139, 130, 0.16)');
-      this._drawLightPool(ctx, 59 * tileSize, 7 * tileSize, 140, 'rgba(167, 195, 186, 0.13)');
-      this._drawLightPool(ctx, 58 * tileSize, 23 * tileSize, 120, 'rgba(230, 189, 120, 0.11)');
-      this._drawLightPool(ctx, 24 * tileSize, 34 * tileSize, 130, 'rgba(230, 189, 120, 0.15)');
-      this._drawLightPool(ctx, 60 * tileSize, 39 * tileSize, 130, 'rgba(230, 189, 120, 0.12)');
-    } else if (scene.id === 'server_room_7') {
-      this._drawLightPool(ctx, 23 * tileSize, 5 * tileSize, 150, 'rgba(57, 139, 130, 0.16)');
-      this._drawLightPool(ctx, 16 * tileSize, 11 * tileSize, 100, 'rgba(230, 189, 120, 0.12)');
-      this._drawLightPool(ctx, 23 * tileSize, 26 * tileSize, 95, 'rgba(198, 106, 76, 0.14)');
-    }
-    ctx.restore();
 
     // 6. Labels ONLY for Story NPCs + Floating [E] Prompt
     ctx.font = 'bold 10px CipherBody, sans-serif';
