@@ -1,6 +1,6 @@
 {
-  "tileWidth": 32,
-  "tileHeight": 32,
+  "tileWidth": 16,
+  "tileHeight": 16,
   "columns": 16,
   "rows": 2
 }
