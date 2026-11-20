@@ -26,18 +26,14 @@ jobs:
 
       - name: Verify JavaScript syntax
         run: |
-          find src tests -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check
+          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          find src tests -type f -name '*.mjs' -print0 | xargs -0 -n1 node --check
 
       - name: Run automated tests
         run: npm test
 
       - name: Package complete project
-        run: |
-          zip -r OPERATION-CIPHER-v2.2.8-visual-slice.zip . \\
-            -x '.git/*' \\
-            -x 'operation-cipher-v2.2.8.zip' \\
-            -x 'OPERATION-CIPHER-v2.2.8-visual-slice.zip' \\
-            -x 'node_modules/*'
+        run: zip -r OPERATION-CIPHER-v2.2.8-visual-slice.zip . -x '.git/*' 'node_modules/*' 'operation-cipher-v2.2.8.zip' 'OPERATION-CIPHER-v2.2.8-visual-slice.zip'
 
       - name: Upload project ZIP
         uses: actions/upload-artifact@v4
