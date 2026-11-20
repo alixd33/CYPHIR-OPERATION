@@ -1,0 +1,11 @@
+{
+  "name": "operation-cipher",
+  "version": "2.2.8",
+  "description": "OPERATION: CIPHER — Offline PC Investigation & Grade 9 Mathematics Game",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/domain.test.mjs tests/engines.test.mjs tests/v223_qa.test.mjs tests/v225_qa.test.mjs tests/v226_qa.test.mjs tests/v228_qa.test.mjs",
+    "test:e2e": "node tests/browser.e2e.mjs"
+  }
+}
