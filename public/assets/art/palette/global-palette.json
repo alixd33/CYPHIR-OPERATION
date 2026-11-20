@@ -1,0 +1,26 @@
+{
+  "version": "2.2.2",
+  "name": "OPERATION: CIPHER Global Palette",
+  "base": {
+    "darkBg": "#171B20",
+    "deepCharcoal": "#252B30",
+    "midSlate": "#46515A",
+    "lightSlate": "#77828A",
+    "warmWhite": "#E8E1D3",
+    "paperCream": "#CBBE9D"
+  },
+  "cipher": {
+    "tealDark": "#245B59",
+    "tealMain": "#398B82",
+    "tealLight": "#75B8A8",
+    "goldOrg": "#C6A15B",
+    "goldLight": "#E3C77D"
+  },
+  "accents": {
+    "warningOrange": "#D18A48",
+    "controlledRed": "#B85C55",
+    "confirmGreen": "#779B70",
+    "intelPurple": "#796B94",
+    "woodBrown": "#73523E"
+  }
+}

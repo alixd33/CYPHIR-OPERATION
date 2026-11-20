@@ -1,0 +1,9 @@
+{
+  "id": "arman",
+  "frameWidth": 32,
+  "frameHeight": 48,
+  "anchor": {
+    "x": 16,
+    "y": 46
+  }
+}

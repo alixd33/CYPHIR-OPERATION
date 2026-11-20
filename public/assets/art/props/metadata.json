@@ -1,0 +1,14 @@
+{
+  "assetName": "props_sheet",
+  "dimensions": {
+    "width": 512,
+    "height": 1024
+  },
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "columns": 8,
+  "rows": 16,
+  "totalProps": 128,
+  "layer": "y-sorted-props",
+  "perspective": "three-quarter-top-down"
+}

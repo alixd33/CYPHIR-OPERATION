@@ -1,0 +1,25 @@
+{
+  "frameWidth": 32,
+  "frameHeight": 48,
+  "anchor": {
+    "x": 16,
+    "y": 46
+  },
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "idleCols": [
+    0,
+    1
+  ],
+  "walkCols": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "frameDurationMs": 125
+}
