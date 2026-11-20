@@ -1,8 +1,8 @@
 /**
  * Architectural 4-Direction Autotiling Wall System (v2.2.8 — 16x16 Tile Grid)
  * - 4-bit cardinal neighbor mask: N=1, E=2, S=4, W=8
- * - Continuous unbroken 6px vertical caps on West/East walls
- * - Proportional 6px top cap + 12px front face + 3px floor drop-shadow on horizontal walls
+ * - Shared 6px cap + 10px projected face profile for both cardinal orientations
+ * - Unified corner joints and restrained 2px contact shadows
  * - 7 coordinated wall material families: office (4), executive (11), monitoring (12), operations (14), painted (15), concrete (16), server
  * - Supports Glass Partitions (6), Windows (8), Wall Monitors (10), Door Frames (5), Columns (mask=0)
  * - Includes Automated Wall & Map Integrity Validator (validateSceneWalls)
