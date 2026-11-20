@@ -420,7 +420,7 @@ async function run() {
     const exceptions = cdp.events.filter((e) => e.method === 'Runtime.exceptionThrown');
     assert.equal(exceptions.length, 0, `Uncaught browser exceptions: ${JSON.stringify(exceptions)}`);
 
-    console.log('ALL v2.2.1 E2E CHROMIUM BROWSER & OFFLINE TESTS PASSED!');
+    console.log('ALL v2.2.8 E2E CHROMIUM BROWSER & OFFLINE TESTS PASSED!');
   } finally {
     cdp?.close();
     chromeProc.kill('SIGKILL');
