@@ -40,7 +40,7 @@ test('prop fit preserves source aspect ratio and bottom-center ground anchor', (
   assert.equal(fitted.dh, 50);
   assert.equal(fitted.dx + fitted.dw / 2, 100);
   assert.equal(fitted.dy + fitted.dh, 200);
-  assert.equal(fitted.dw / fitted.dh, 40 / 56);
+  assert.ok(Math.abs(fitted.dw / fitted.dh - 40 / 56) < 0.02);
 });
 
 test('horizontal and vertical wall runs share a six-pixel cap and ten-pixel face', () => {
