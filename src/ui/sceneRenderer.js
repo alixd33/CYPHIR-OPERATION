@@ -12,6 +12,7 @@
 import { drawWallTile, drawDoorFrame, isWallTile } from './wallSystem.js';
 import { TILE_SIZE } from '../domain/worldConfig.js';
 import { getPropCollisionBox } from '../engines/pathfinding.js';
+import { findOpaqueBounds, fitSpriteIntoBox } from './spriteGeometry.js';
 
 export class SceneRenderer {
   constructor(canvas, explorationEngine, pauseManager, appearance, campaignState, onInteractPromptChange, onTriggerInteract, onPathError, onZoomChange) {
@@ -39,6 +40,7 @@ export class SceneRenderer {
     this.camera = { x: 0, y: 0, zoom: 1.5, userScale: 1.0 };
 
     this.ambientState = new Map();
+    this.propBoundsCache = new Map();
 
     this.images = {
       tiles: new Image(),
@@ -243,6 +245,30 @@ export class SceneRenderer {
     this.camera.y = Math.max(0, Math.min(maxY, targetY));
   }
 
+  _getPropOpaqueBounds(col, row) {
+    const key = `${col},${row}`;
+    if (this.propBoundsCache.has(key)) return this.propBoundsCache.get(key);
+    const image = this.images.props;
+    if (!image?.complete || !image.naturalWidth) return { x: 0, y: 0, width: 64, height: 64 };
+
+    try {
+      const scratch = document.createElement('canvas');
+      scratch.width = 64;
+      scratch.height = 64;
+      const scratchCtx = scratch.getContext('2d', { willReadFrequently: true });
+      scratchCtx.drawImage(image, col * 64, row * 64, 64, 64, 0, 0, 64, 64);
+      const pixels = scratchCtx.getImageData(0, 0, 64, 64).data;
+      const bounds = findOpaqueBounds(pixels, 64, 64, 8);
+      this.propBoundsCache.set(key, bounds);
+      return bounds;
+    } catch {
+      // Keep the atlas usable if a browser disables pixel readback.
+      const fallback = { x: 0, y: 0, width: 64, height: 64 };
+      this.propBoundsCache.set(key, fallback);
+      return fallback;
+    }
+  }
+
   _drawContactShadow(ctx, cx, cy, rx = 10, ry = 4) {
     ctx.save();
     ctx.fillStyle = 'rgba(15, 18, 22, 0.34)';
@@ -295,11 +321,29 @@ export class SceneRenderer {
     // 1b. Handcrafted Floor Accents (Atrium Ceremonial Rug)
     if (scene.id === 'cipher_hq') {
       ctx.save();
-      ctx.fillStyle = 'rgba(36, 91, 89, 0.35)';
-      ctx.fillRect(28 * tileSize + 6, 20 * tileSize + 6, 16 * tileSize - 12, 8 * tileSize - 12);
-      ctx.strokeStyle = 'rgba(198, 161, 91, 0.48)';
+      const rugX = 28 * tileSize + 6;
+      const rugY = 20 * tileSize + 6;
+      const rugW = 16 * tileSize - 12;
+      const rugH = 8 * tileSize - 12;
+      ctx.fillStyle = 'rgba(19, 47, 48, 0.30)';
+      ctx.fillRect(rugX + 4, rugY + 5, rugW, rugH);
+      ctx.fillStyle = 'rgba(36, 91, 89, 0.52)';
+      ctx.fillRect(rugX, rugY, rugW, rugH);
+      ctx.fillStyle = 'rgba(49, 105, 99, 0.28)';
+      ctx.fillRect(rugX + 5, rugY + 5, rugW - 10, rugH - 10);
+      ctx.strokeStyle = 'rgba(198, 161, 91, 0.68)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(28 * tileSize + 8, 20 * tileSize + 8, 16 * tileSize - 16, 8 * tileSize - 16);
+      ctx.strokeRect(rugX + 2, rugY + 2, rugW - 4, rugH - 4);
+      ctx.strokeStyle = 'rgba(227, 199, 125, 0.34)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(rugX + 7, rugY + 7, rugW - 14, rugH - 14);
+      ctx.fillStyle = 'rgba(227, 199, 125, 0.58)';
+      for (const [cx, cy] of [[rugX + 10, rugY + 10], [rugX + rugW - 10, rugY + 10], [rugX + 10, rugY + rugH - 10], [rugX + rugW - 10, rugY + rugH - 10]]) {
+        ctx.fillRect(cx - 2, cy - 1, 4, 2);
+        ctx.fillRect(cx - 1, cy - 2, 2, 4);
+      }
+      ctx.fillStyle = 'rgba(198, 161, 91, 0.22)';
+      ctx.fillRect(rugX + Math.floor(rugW / 2) - 1, rugY + 12, 2, rugH - 24);
       ctx.restore();
     }
 
@@ -389,7 +433,26 @@ export class SceneRenderer {
         const { prop, x, y, w, h } = item.pr;
         const dx = Math.round(x * tileSize + (tileSize - w) / 2);
         const dy = Math.round(y * tileSize + (tileSize - h));
-        ctx.drawImage(this.images.props, prop[0] * 64, prop[1] * 64, 64, 64, dx, dy, w, h);
+        const opaque = this._getPropOpaqueBounds(prop[0], prop[1]);
+        const fitted = fitSpriteIntoBox(opaque, {
+          centerX: dx + w / 2,
+          bottomY: dy + h,
+          width: w,
+          height: h,
+        });
+        if (fitted) {
+          ctx.drawImage(
+            this.images.props,
+            prop[0] * 64 + fitted.sx,
+            prop[1] * 64 + fitted.sy,
+            fitted.sw,
+            fitted.sh,
+            fitted.dx,
+            fitted.dy,
+            fitted.dw,
+            fitted.dh
+          );
+        }
         if (((prop[0] === 3 || prop[0] === 4) && prop[1] === 1 || (prop[0] === 0 && prop[1] === 5) || (prop[0] === 1 && prop[1] === 8)) && ((Math.round(x + y) + Math.floor(tsMs / 400)) % 3 === 0)) {
           ctx.fillStyle = Math.round(x) % 2 === 0 ? '#779B70' : '#D18A48';
           ctx.fillRect(dx + 14, dy + 16 + (Math.round(x * 7) % 20), 2, 2);
