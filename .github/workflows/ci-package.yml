@@ -33,12 +33,15 @@ jobs:
         run: npm test
 
       - name: Package complete project
-        run: zip -r OPERATION-CIPHER-v2.2.8-visual-slice.zip . -x '.git/*' 'node_modules/*' 'operation-cipher-v2.2.8.zip' 'OPERATION-CIPHER-v2.2.8-visual-slice.zip'
+        run: |
+          zip -qr "$RUNNER_TEMP/OPERATION-CIPHER-v2.2.8-visual-slice.zip" . \
+            -x './.git/*' './node_modules/*' '*/node_modules/*' \
+               './operation-cipher-v2.2.8.zip'
 
       - name: Upload project ZIP
         uses: actions/upload-artifact@v4
         with:
           name: OPERATION-CIPHER-v2.2.8-visual-slice
-          path: OPERATION-CIPHER-v2.2.8-visual-slice.zip
+          path: ${{ runner.temp }}/OPERATION-CIPHER-v2.2.8-visual-slice.zip
           if-no-files-found: error
           retention-days: 14
