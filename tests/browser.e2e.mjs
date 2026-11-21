@@ -188,7 +188,8 @@ async function run() {
       mobile: false,
     });
 
-    await cdp.send('Page.navigate', { url: `http://cipher.local:${port}/` });
+    // Use loopback explicitly: Chromium treats custom .local names as blocked in some managed runners.
+    await cdp.send('Page.navigate', { url: `http://127.0.0.1:${port}/` });
     for (let w = 0; w < 20; w++) {
       if (await cdp.eval(`Boolean(document.getElementById('btn-boot-continue'))`)) break;
       await sleep(250);
