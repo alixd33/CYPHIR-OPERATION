@@ -28,6 +28,7 @@ export class ExplorationEngine {
       dir: 0, // 0=down, 1=up, 2=left, 3=right
       col: 0, // 0..1 idle, 2..5 walk
       animTimer: 0,
+      animDistance: 0,
       idleTimer: 0,
       isMoving: false,
     };
@@ -62,6 +63,10 @@ export class ExplorationEngine {
     this.player.y = pos.y;
     this.player.dir = pos.dir ?? 0;
     this.player.col = 0;
+    this.player.animTimer = 0;
+    this.player.animDistance = 0;
+    this.player.idleTimer = 0;
+    this.player.isMoving = false;
     this.clearPath();
 
     this.eventBus?.emit('SCENE_TRANSFERRED', { sceneId, x: this.player.x, y: this.player.y });
@@ -140,6 +145,7 @@ export class ExplorationEngine {
     const ts = this.tileSize;
     let dx = 0;
     let dy = 0;
+
     if (keys.has('ArrowUp') || keys.has('KeyW') || keys.has('arrowup') || keys.has('w')) dy -= 1;
     if (keys.has('ArrowDown') || keys.has('KeyS') || keys.has('arrowdown') || keys.has('s')) dy += 1;
     if (keys.has('ArrowLeft') || keys.has('KeyA') || keys.has('arrowleft') || keys.has('a')) dx -= 1;
@@ -147,60 +153,114 @@ export class ExplorationEngine {
 
     const manualInput = dx !== 0 || dy !== 0;
     if (manualInput) {
+      // Keyboard input always takes priority and cancels an existing click route.
       if (this.activePath.length > 0 || this.targetCell) this.clearPath();
-      const len = Math.hypot(dx, dy);
-      dx /= len;
-      dy /= len;
+      const length = Math.hypot(dx, dy);
+      dx /= length;
+      dy /= length;
     } else if (this.activePath.length > 0) {
-      const wp = this.activePath[0];
-      if (!isCellWalkable(this.navGrid, wp.x, wp.y)) {
-        const last = this.targetCell || wp;
-        this.setClickDestination(last.x * ts + ts / 2, last.y * ts + ts / 2);
-      }
-      if (this.activePath.length > 0) {
-        const nextWp = this.activePath[0];
-        const targetPx = nextWp.x * ts + ts / 2 - 16;
-        const targetPy = nextWp.y * ts + ts / 2 - 26;
-        const tdx = targetPx - this.player.x;
-        const tdy = targetPy - this.player.y;
-        const dist = Math.hypot(tdx, tdy);
-        if (dist <= 3) {
-          this.player.x = targetPx;
-          this.player.y = targetPy;
+      // Consume waypoints already reached before selecting the next movement vector.
+      let guard = 0;
+      while (this.activePath.length > 0 && guard++ < 4) {
+        const waypoint = this.activePath[0];
+        if (!isCellWalkable(this.navGrid, waypoint.x, waypoint.y)) {
+          const last = this.targetCell || waypoint;
+          const replanned = this.setClickDestination(last.x * ts + ts / 2, last.y * ts + ts / 2);
+          if (!replanned.ok) break;
+        }
+        const next = this.activePath[0];
+        if (!next) break;
+        const targetX = next.x * ts + ts / 2 - 16;
+        const targetY = next.y * ts + ts / 2 - 26;
+        const distance = Math.hypot(targetX - this.player.x, targetY - this.player.y);
+        if (distance <= 0.75) {
+          this.player.x = targetX;
+          this.player.y = targetY;
           this.activePath.shift();
           if (this.activePath.length === 0) this.targetCell = null;
-        } else {
-          dx = tdx / dist;
-          dy = tdy / dist;
+          continue;
         }
+        dx = (targetX - this.player.x) / distance;
+        dy = (targetY - this.player.y) / distance;
+        break;
       }
     }
 
-    const speed = 145;
-    const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
-    this.player.isMoving = moving;
+    const hasIntent = Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001;
+    const speed = 64; // 4 tiles/sec at 16px tiles; identical for keyboard and click movement.
+    let travel = hasIntent ? Math.max(0, Math.min(0.05, dt)) * speed : 0;
 
-    if (moving) {
-      if (Math.abs(dx) > Math.abs(dy)) this.player.dir = dx < 0 ? 2 : 3;
-      else this.player.dir = dy < 0 ? 1 : 0;
+    if (!manualInput && this.activePath.length > 0) {
+      const next = this.activePath[0];
+      const targetX = next.x * ts + ts / 2 - 16;
+      const targetY = next.y * ts + ts / 2 - 26;
+      travel = Math.min(travel, Math.hypot(targetX - this.player.x, targetY - this.player.y));
+    }
 
-      const nx = this.player.x + dx * speed * dt;
-      const ny = this.player.y + dy * speed * dt;
-      const movedX = this.canWalkAt(nx, this.player.y);
-      if (movedX) this.player.x = nx;
-      const movedY = this.canWalkAt(this.player.x, ny);
-      if (movedY) this.player.y = ny;
+    const startX = this.player.x;
+    const startY = this.player.y;
+    if (travel > 0.001) {
+      const nextX = startX + dx * travel;
+      const nextY = startY + dy * travel;
+      const canMoveTogether = this.canWalkAt(nextX, nextY);
 
-      if (!movedX && !movedY && !manualInput && this.activePath.length > 0) {
-        const last = this.targetCell;
-        if (last) this.setClickDestination(last.x * ts + ts / 2, last.y * ts + ts / 2);
+      if (canMoveTogether) {
+        this.player.x = nextX;
+        this.player.y = nextY;
+      } else if (manualInput) {
+        // Preserve the familiar wall-sliding behaviour for direct keyboard control.
+        if (this.canWalkAt(nextX, startY)) this.player.x = nextX;
+        if (this.canWalkAt(this.player.x, nextY)) this.player.y = nextY;
+      } else if (Math.abs(dx) >= Math.abs(dy)) {
+        if (this.canWalkAt(nextX, startY)) this.player.x = nextX;
+        if (this.canWalkAt(this.player.x, nextY)) this.player.y = nextY;
+      } else {
+        if (this.canWalkAt(startX, nextY)) this.player.y = nextY;
+        if (this.canWalkAt(nextX, this.player.y)) this.player.x = nextX;
+      }
+    }
+
+    const movedX = this.player.x - startX;
+    const movedY = this.player.y - startY;
+    const movedDistance = Math.hypot(movedX, movedY);
+    this.player.isMoving = movedDistance > 0.05;
+
+    if (this.player.isMoving) {
+      const ax = Math.abs(movedX);
+      const ay = Math.abs(movedY);
+      if (ax > ay + 0.5) this.player.dir = movedX < 0 ? 2 : 3;
+      else if (ay > ax + 0.5) this.player.dir = movedY < 0 ? 1 : 0;
+      else {
+        // On diagonal segments retain a compatible facing direction instead of flickering.
+        const horizontalMatches = (this.player.dir === 2 && movedX < 0) || (this.player.dir === 3 && movedX > 0);
+        const verticalMatches = (this.player.dir === 1 && movedY < 0) || (this.player.dir === 0 && movedY > 0);
+        if (!horizontalMatches && !verticalMatches) this.player.dir = movedY < 0 ? 1 : 0;
       }
 
-      this.player.animTimer += dt;
-      if (this.player.animTimer >= 0.125) {
-        this.player.animTimer = 0;
+      // Advance the walk cycle from real pixels travelled, not elapsed time or intended input.
+      this.player.animDistance += movedDistance;
+      while (this.player.animDistance >= 8) {
+        this.player.animDistance -= 8;
         this.player.col = this.player.col < 2 || this.player.col >= 5 ? 2 : this.player.col + 1;
       }
+      this.player.idleTimer = 0;
+
+      if (!manualInput && this.activePath.length > 0) {
+        const waypoint = this.activePath[0];
+        const targetX = waypoint.x * ts + ts / 2 - 16;
+        const targetY = waypoint.y * ts + ts / 2 - 26;
+        if (Math.hypot(targetX - this.player.x, targetY - this.player.y) <= 0.75) {
+          this.player.x = targetX;
+          this.player.y = targetY;
+          this.activePath.shift();
+          if (this.activePath.length === 0) this.targetCell = null;
+        } else if (movedDistance < travel * 0.2 && travel > 0.1 && this.targetCell) {
+          // Rebuild a route if the live footbox disagrees with the navigation grid.
+          const goal = this.targetCell;
+          this.setClickDestination(goal.x * ts + ts / 2, goal.y * ts + ts / 2);
+        }
+      }
+
       if (campaignState) {
         campaignState.playerPosition = {
           x: Math.round(this.player.x),
@@ -209,7 +269,8 @@ export class ExplorationEngine {
         };
       }
     } else {
-      this.player.idleTimer += dt;
+      this.player.animDistance = 0;
+      this.player.idleTimer += Math.max(0, dt);
       if (this.player.idleTimer > 2.2) {
         this.player.col = 1;
         if (this.player.idleTimer > 2.4) {

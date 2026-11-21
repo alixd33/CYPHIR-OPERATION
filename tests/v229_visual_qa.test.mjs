@@ -44,8 +44,8 @@ test('prop fit preserves source aspect ratio and bottom-center ground anchor', (
 });
 
 test('horizontal and vertical wall runs share a six-pixel cap and ten-pixel face', () => {
-  assert.equal(WALL_PROFILE.capDepth, 6);
-  assert.equal(WALL_PROFILE.faceDepth, 10);
+  assert.equal(WALL_PROFILE.capDepth, 7);
+  assert.equal(WALL_PROFILE.faceDepth, 12);
 
   const rects = [];
   const ctx = {
@@ -58,7 +58,7 @@ test('horizontal and vertical wall runs share a six-pixel cap and ten-pixel face
     [0, 4, 0],
     [0, 4, 0],
   ], 1, 1);
-  assert.ok(rects.some((r) => r.x === 23 && r.width === 7) && rects.some((r) => r.x === 30 && r.width === 2), 'Vertical wall needs a 10px side face');
+  assert.ok(rects.some((r) => r.x === 24 && r.width === 9) && rects.some((r) => r.x === 35 && r.width === 2), 'Vertical wall needs a deeper continuous side face');
 
   rects.length = 0;
   drawWallTile(ctx, [
@@ -66,5 +66,5 @@ test('horizontal and vertical wall runs share a six-pixel cap and ten-pixel face
     [4, 4, 4],
     [0, 0, 0],
   ], 1, 1);
-  assert.ok(rects.some((r) => r.y === 23 && r.height === 7) && rects.some((r) => r.y === 30 && r.height === 2), 'Horizontal wall needs a 10px front face');
+  assert.ok(rects.some((r) => r.y === 24 && r.height === 9) && rects.some((r) => r.y === 35 && r.height === 2), 'Horizontal wall needs a deeper projected front face');
 });

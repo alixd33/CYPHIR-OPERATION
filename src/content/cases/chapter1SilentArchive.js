@@ -72,16 +72,24 @@ function buildCipherHqGrid() {
 function buildServerRoom7Grid() {
   const W = 48, H = 30;
   const g = Array.from({ length: H }, () => Array(W).fill(0));
+
+  // Outer concrete shell. The four-cell south opening is the scene transfer door.
   for (let x = 0; x < W; x++) { g[0][x] = 4; g[H - 1][x] = 4; }
   for (let y = 0; y < H; y++) { g[y][0] = 4; g[y][W - 1] = 4; }
 
-  for (let x = 4; x <= 43; x++) { g[8][x] = 1; g[9][x] = 1; g[18][x] = 1; g[19][x] = 1; }
-  for (let y = 6; y <= 25; y++) { g[y][22] = 1; g[y][23] = 1; g[y][24] = 1; g[y][25] = 1; }
+  // Distinct floor materials: west equipment bay, east equipment bay, and
+  // a continuous central service aisle with a broad east-west cross aisle.
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x <= 20; x++) g[y][x] = 1;
+    for (let x = 27; x < W - 1; x++) g[y][x] = 2;
+    for (let x = 21; x <= 26; x++) g[y][x] = 3;
+  }
+  for (let y = 12; y <= 16; y++) {
+    for (let x = 1; x < W - 1; x++) g[y][x] = 3;
+  }
 
-  for (let y = 12; y <= 16; y++) for (let x = 16; x <= 17; x++) g[y][x] = 2;
-  for (let y = 12; y <= 16; y++) for (let x = 30; x <= 31; x++) g[y][x] = 2;
-  for (let y = 13; y <= 15; y++) for (let x = 38; x <= 41; x++) g[y][x] = 3;
-  g[29][22] = 5; g[29][23] = 5; g[29][24] = 5; g[29][25] = 5;
+  // Door threshold in the southern wall.
+  for (let x = 22; x <= 25; x++) g[H - 1][x] = 5;
   return g;
 }
 
@@ -350,56 +358,31 @@ export const CHAPTER_1_CASE = {
         { id: 'door-sr7-exit', x: 22, y: 29, widthTiles: 4, label: 'در خروجی اتاق سرور 7', initialState: 'open', interactive: false },
       ],
       props: [
-        // 5 Distinct Server Rack Models: A (3,1), B (4,1), C (5,1), Blade (0,5), Optical (1,8)
-        { id: 'sr7-r1', prop: [3, 1], x: 6.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r2', prop: [4, 1], x: 9.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r3', prop: [5, 1], x: 12.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r4', prop: [0, 5], x: 15.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r5', prop: [0, 5], x: 31.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r6', prop: [1, 8], x: 34.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r7', prop: [5, 1], x: 37.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r8', prop: [3, 1], x: 40.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r9', prop: [4, 1], x: 6.0, y: 20.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r10', prop: [0, 5], x: 9.6, y: 20.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r11', prop: [5, 1], x: 13.2, y: 20.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r12', prop: [1, 8], x: 32.8, y: 20.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r13', prop: [3, 1], x: 36.4, y: 20.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
-        { id: 'sr7-r14', prop: [0, 5], x: 40.0, y: 20.0, w: 46, h: 56, solid: true, footprint: { w: 30, h: 16 } },
+        // Eight distinct rack placements form two equipment banks; the middle
+        // remains open as a north-south route and a full-width cross aisle.
+        { id: 'sr7-rack-west-north-a', prop: [3, 1], x: 4.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-west-north-b', prop: [4, 1], x: 13.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-east-north-a', prop: [5, 1], x: 32.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-east-north-b', prop: [0, 5], x: 41.0, y: 5.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-west-south-a', prop: [1, 8], x: 4.0, y: 21.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-west-south-b', prop: [3, 1], x: 13.0, y: 21.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-east-south-a', prop: [4, 1], x: 32.0, y: 21.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
+        { id: 'sr7-rack-east-south-b', prop: [5, 1], x: 41.0, y: 21.0, w: 46, h: 56, solid: true, footprint: { w: 28, h: 14 } },
 
-        // EV-01 Server Control Console + Networking Switches
-        { id: 'sr7-terminal-pc', prop: [5, 6], x: 23.0, y: 4.0, w: 60, h: 50, solid: true, footprint: { w: 46, h: 16 } },
-        { id: 'sr7-terminal-ch', prop: [1, 0], x: 23.0, y: 6.0, w: 36, h: 40, solid: false },
-        { id: 'sr7-bench-w', prop: [5, 3], x: 27.0, y: 2.8, w: 54, h: 44, solid: true, footprint: { w: 42, h: 14 } },
-        { id: 'sr7-bench-e', prop: [2, 1], x: 18.6, y: 2.8, w: 54, h: 44, solid: true, footprint: { w: 42, h: 14 } },
-        { id: 'sr7-net-sw', prop: [0, 11], x: 18.6, y: 12.0, w: 42, h: 44, solid: false },
+        // Evidence terminal and its single associated control surface.
+        { id: 'sr7-terminal-console', prop: [5, 6], x: 23.0, y: 4.0, w: 60, h: 50, solid: true, footprint: { w: 42, h: 14 } },
 
-        // Cooling, HVAC, Power Distribution & Cable Conduits
-        { id: 'sr7-hvac-nw', prop: [6, 6], x: 2.8, y: 2.4, w: 52, h: 48, solid: true, footprint: { w: 38, h: 16 } },
-        { id: 'sr7-hvac-ne', prop: [6, 6], x: 42.8, y: 2.4, w: 52, h: 48, solid: true, footprint: { w: 38, h: 16 } },
-        { id: 'sr7-conduit-w', prop: [6, 7], x: 10.4, y: 10.8, w: 40, h: 32, solid: false },
-        { id: 'sr7-conduit-e', prop: [6, 7], x: 35.6, y: 10.8, w: 40, h: 32, solid: false },
-        { id: 'sr7-power', prop: [5, 8], x: 44.0, y: 14.0, w: 44, h: 50, solid: true, footprint: { w: 30, h: 14 } },
-        { id: 'sr7-light1', prop: [2, 8], x: 23.0, y: 11.0, w: 48, h: 24, solid: false },
+        // Essential room infrastructure, placed against the perimeter of each bay.
+        { id: 'sr7-hvac-west', prop: [6, 6], x: 2.5, y: 2.4, w: 50, h: 46, solid: true, footprint: { w: 34, h: 14 } },
+        { id: 'sr7-hvac-east', prop: [6, 6], x: 43.0, y: 2.4, w: 50, h: 46, solid: true, footprint: { w: 34, h: 14 } },
+        { id: 'sr7-network-switch', prop: [0, 11], x: 19.0, y: 10.2, w: 42, h: 42, solid: false },
 
-        // EV-04 Thermal Sensor & EV-05 Key Rack
-        { id: 'sr7-thermal-prop', prop: [0, 3], x: 39.6, y: 14.0, w: 52, h: 48, solid: true, footprint: { w: 36, h: 14 } },
-        { id: 'sr7-keyrack-prop', prop: [1, 3], x: 6.4, y: 14.0, w: 52, h: 44, solid: true, footprint: { w: 36, h: 14 } },
-        { id: 'sr7-badge-scan', prop: [4, 6], x: 4.4, y: 14.0, w: 34, h: 40, solid: false },
+        // The two optional evidence objects remain separated and directly reachable.
+        { id: 'sr7-thermal-prop', prop: [0, 3], x: 39.5, y: 14.0, w: 52, h: 48, solid: true, footprint: { w: 32, h: 14 } },
+        { id: 'sr7-keyrack-prop', prop: [1, 3], x: 6.5, y: 14.0, w: 52, h: 44, solid: true, footprint: { w: 32, h: 14 } },
 
-        // Arash Kazemi's Personal Tech Workspace
-        { id: 'sr7-arash-desk', prop: [7, 6], x: 16.0, y: 10.2, w: 56, h: 46, solid: true, footprint: { w: 44, h: 16 } },
-        { id: 'sr7-arash-files', prop: [1, 7], x: 18.2, y: 10.2, w: 30, h: 28, solid: false },
-        { id: 'sr7-ladder', prop: [0, 6], x: 42.4, y: 21.2, w: 36, h: 44, solid: false },
-        { id: 'sr7-toolbox', prop: [2, 13], x: 28.0, y: 25.0, w: 28, h: 28, solid: false },
-        { id: 'sr7-fire', prop: [4, 7], x: 27.0, y: 26.4, w: 34, h: 42, solid: false },
-
-        // Crates, Tools, Lockers & Signage
-        { id: 'sr7-crate-sw', prop: [7, 3], x: 3.0, y: 24.6, w: 50, h: 44, solid: true, footprint: { w: 36, h: 14 } },
-        { id: 'sr7-tools-se', prop: [6, 2], x: 42.4, y: 24.6, w: 48, h: 42, solid: false },
-        { id: 'sr7-locker', prop: [6, 1], x: 2.8, y: 9.6, w: 42, h: 48, solid: true, footprint: { w: 28, h: 14 } },
-        { id: 'sr7-shelf', prop: [1, 1], x: 43.0, y: 9.6, w: 46, h: 48, solid: true, footprint: { w: 32, h: 14 } },
-        { id: 'sr7-clock', prop: [2, 3], x: 23.0, y: 0.0, w: 30, h: 30, solid: false },
-        { id: 'sr7-sign', prop: [6, 3], x: 28.0, y: 0.0, w: 44, h: 34, solid: false },
+        // Arash's compact work point sits beside, not inside, the main route.
+        { id: 'sr7-arash-desk', prop: [7, 6], x: 16.0, y: 10.2, w: 56, h: 46, solid: true, footprint: { w: 40, h: 14 } },
       ],
       interactables: [
         {

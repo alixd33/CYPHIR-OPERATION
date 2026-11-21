@@ -24,6 +24,20 @@ export function drawFloorDetails(ctx, scene, tileSize = 16) {
     ? 'rgba(8, 20, 25, 0.15)'
     : 'rgba(26, 31, 37, 0.10)';
 
+  if (isServerRoom) {
+    // Broad, low-contrast material zones establish the central north-south
+    // service aisle and its cross-aisle; no tile outlines are drawn.
+    ctx.fillStyle = 'rgba(22, 48, 57, 0.13)';
+    ctx.fillRect(21 * tileSize, tileSize, 6 * tileSize, 28 * tileSize);
+    ctx.fillStyle = 'rgba(74, 127, 119, 0.09)';
+    ctx.fillRect(tileSize, 12 * tileSize, 46 * tileSize, 5 * tileSize);
+    ctx.fillStyle = 'rgba(117, 184, 168, 0.13)';
+    for (let y = 2; y < 28; y += 4) {
+      ctx.fillRect(20 * tileSize + 4, y * tileSize + 7, 3, 1);
+      ctx.fillRect(25 * tileSize + 9, y * tileSize + 7, 3, 1);
+    }
+  }
+
   for (let y = 0; y < scene.grid.length; y++) {
     const row = scene.grid[y];
     if (!Array.isArray(row)) continue;

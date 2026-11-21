@@ -9,7 +9,7 @@
  * - 128 handcrafted 2.5D 64x64 props (8x16 props_sheet.png) + Y-Sorting + A* Path Preview
  */
 
-import { drawWallTile, drawDoorFrame, isWallTile } from './wallSystem.js';
+import { drawWallTile, drawDoorFrame, drawDoorPanel, isWallTile } from './wallSystem.js';
 import { TILE_SIZE } from '../domain/worldConfig.js';
 import { getPropCollisionBox } from '../engines/pathfinding.js';
 import { findOpaqueBounds, fitSpriteIntoBox } from './spriteGeometry.js';
@@ -113,11 +113,9 @@ export class SceneRenderer {
   recomputeCameraZoom() {
     const scene = this.exploration.activeScene;
     if (!scene) return;
-    const ts = scene.tileSize || TILE_SIZE;
-    const minZoomX = this.cssWidth / (scene.width * ts);
-    const minZoomY = this.cssHeight / (scene.height * ts);
-    const baseZoom = Math.max(1.35, minZoomX, minZoomY);
-    this.camera.zoom = Math.max(minZoomX, minZoomY, baseZoom * this.camera.userScale);
+    // A shared world scale keeps the HQ and Server Room 7 visually consistent.
+    const baseZoom = 1.35;
+    this.camera.zoom = baseZoom * this.camera.userScale;
   }
 
   syncCanvasSize(entry = null) {
@@ -418,40 +416,10 @@ export class SceneRenderer {
       }
     }
 
-    // 2. Doors
+    // 2. Doors — draw the full architectural leaf, frame, threshold and state.
     for (const door of scene.doors || []) {
-      const st = this.exploration.doorStates[door.id] || door.initialState || 'open';
-      const dx = door.x * tileSize;
-      const dy = door.y * tileSize;
-      if (st === 'closed' || st === 'locked') {
-        if (this.images.props.complete) {
-          const opaque = this._getPropOpaqueBounds(0, 2);
-          const fitted = fitSpriteIntoBox(opaque, {
-            centerX: dx + 16,
-            bottomY: dy + 28,
-            width: 40,
-            height: 44,
-          });
-          if (fitted) {
-            ctx.drawImage(
-              this.images.props,
-              fitted.sx,
-              2 * 64 + fitted.sy,
-              fitted.sw,
-              fitted.sh,
-              fitted.dx,
-              fitted.dy,
-              fitted.dw,
-              fitted.dh
-            );
-          }
-        }
-        ctx.fillStyle = st === 'locked' ? '#B85C55' : '#D18A48';
-        ctx.fillRect(dx + 12, dy + 4, 4, 4);
-      } else {
-        ctx.fillStyle = '#779B70';
-        ctx.fillRect(dx + 12, dy + 2, 3, 3);
-      }
+      const state = this.exploration.doorStates[door.id] || door.initialState || 'open';
+      drawDoorPanel(ctx, door, state, tileSize);
     }
 
     // 3. A* Click-to-Move Path Preview
@@ -485,7 +453,8 @@ export class SceneRenderer {
     // 5. Y-Sorted Renderables (Props + Story NPCs + Ambient Staff + Player)
     const renderList = [];
     for (const pr of scene.props || []) {
-      renderList.push({ kind: 'prop', sortY: pr.y * tileSize + tileSize, pr });
+      const sortY = pr.mount === 'wall' ? Number.NEGATIVE_INFINITY : pr.y * tileSize + tileSize;
+      renderList.push({ kind: 'prop', sortY, pr });
     }
     const npcIdleCol = Math.floor(tsMs / 900) % 2;
     for (const npc of scene.npcs || []) {
