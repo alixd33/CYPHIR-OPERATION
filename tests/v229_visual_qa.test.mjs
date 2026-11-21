@@ -43,7 +43,7 @@ test('prop fit preserves source aspect ratio and bottom-center ground anchor', (
   assert.ok(Math.abs(fitted.dw / fitted.dh - 40 / 56) < 0.02);
 });
 
-test('horizontal and vertical wall runs share a six-pixel cap and ten-pixel face', () => {
+test('horizontal and vertical wall runs share a deep 2.5D cap and projected face', () => {
   assert.equal(WALL_PROFILE.capDepth, 7);
   assert.equal(WALL_PROFILE.faceDepth, 12);
 

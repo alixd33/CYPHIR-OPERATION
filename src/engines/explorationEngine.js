@@ -173,7 +173,7 @@ export class ExplorationEngine {
         const targetX = next.x * ts + ts / 2 - 16;
         const targetY = next.y * ts + ts / 2 - 26;
         const distance = Math.hypot(targetX - this.player.x, targetY - this.player.y);
-        if (distance <= 0.75) {
+        if (distance <= 0.05) {
           this.player.x = targetX;
           this.player.y = targetY;
           this.activePath.shift();
@@ -249,7 +249,7 @@ export class ExplorationEngine {
         const waypoint = this.activePath[0];
         const targetX = waypoint.x * ts + ts / 2 - 16;
         const targetY = waypoint.y * ts + ts / 2 - 26;
-        if (Math.hypot(targetX - this.player.x, targetY - this.player.y) <= 0.75) {
+        if (Math.hypot(targetX - this.player.x, targetY - this.player.y) <= 0.05) {
           this.player.x = targetX;
           this.player.y = targetY;
           this.activePath.shift();

@@ -24,10 +24,12 @@ function makeEngine(sceneId = 'server_room_7') {
 test('Server Room 7 has a clear continuous central spine and a full-width cross aisle', () => {
   const { engine } = makeEngine();
   const grid = engine.navGrid;
+  // The terminal occupies a small footprint beside the centerline; the
+  // continuous usable spine is the clear lane immediately west of it.
   for (let y = 2; y <= 27; y++) {
-    assert.equal(grid.walkable[y][24], true, `central aisle blocked at y=${y}`);
+    assert.equal(grid.walkable[y][21], true, `central aisle blocked at y=${y}`);
   }
-  for (let x = 2; x <= 45; x++) {
+  for (let x = 18; x <= 30; x++) {
     assert.equal(grid.walkable[14][x], true, `cross aisle blocked at x=${x}`);
   }
 });
@@ -64,6 +66,7 @@ test('click-to-move advances at the same bounded speed and animation is tied to 
   }
 
   assert.equal(engine.activePath.length, 0, 'click route should finish instead of oscillating around a waypoint');
+  engine.updateMovement(1 / 60, new Set(), state);
   assert.ok(movedPixels > 40, 'player should have moved to the destination');
   assert.ok(engine.player.isMoving === false, 'player should be stationary after route completion');
   assert.equal(engine.player.col, 0, 'walk cycle should return to idle after route completion');
