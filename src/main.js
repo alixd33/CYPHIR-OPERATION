@@ -576,7 +576,7 @@ function renderScreenBody() {
           <div class="panel" style="background:var(--bg-charcoal-dk); border-color:var(--accent-bronze);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <h3>${CAMPAIGN_SILENT_ARCHIVE.title} (<span class="ltr-token" dir="ltr">${CAMPAIGN_SILENT_ARCHIVE.codeName}</span>)</h3>
-              <span class="badge badge-fact">نسخه 2.2.1 — تحقیق غیرخطی چپتر 1</span>
+              <span class="badge badge-fact">نسخه 2.2.8 — تحقیق غیرخطی چپتر 1</span>
             </div>
             <p style="color:var(--text-muted);">${CAMPAIGN_SILENT_ARCHIVE.subtitle}</p>
             <p style="line-height:1.8;">${CAMPAIGN_SILENT_ARCHIVE.synopsis}</p>

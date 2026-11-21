@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 echo ==================================================
-echo   OPERATION: CIPHER v2.2.1 - Windows Launcher
+echo   OPERATION: CIPHER v2.2.8 - Windows Launcher
 echo ==================================================
 
 where node >nul 2>nul

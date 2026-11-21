@@ -50,7 +50,7 @@ function createAppServer() {
     const urlPath = req.url || '/';
     if (urlPath === '/api/health') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ status: 'ok', app: 'OPERATION: CIPHER', version: '2.0.0' }));
+      res.end(JSON.stringify({ status: 'ok', app: 'OPERATION: CIPHER', version: '2.2.8' }));
       return;
     }
 
@@ -92,7 +92,7 @@ function tryListen(port, attemptsLeft) {
     const url = `http://127.0.0.1:${port}`;
     fs.writeFileSync(PID_FILE, String(process.pid), 'utf8');
     fs.writeFileSync(URL_FILE, url, 'utf8');
-    console.log(`OPERATION: CIPHER v2.0 local server running at ${url}`);
+    console.log(`OPERATION: CIPHER v2.2.8 local server running at ${url}`);
     console.log(`PID: ${process.pid}`);
   });
 

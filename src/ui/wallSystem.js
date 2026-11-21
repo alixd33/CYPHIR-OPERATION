@@ -1,8 +1,8 @@
 /**
  * Architectural 4-Direction Autotiling Wall System (v2.2.8 — 16x16 Tile Grid)
  * - 4-bit cardinal neighbor mask: N=1, E=2, S=4, W=8
- * - Continuous unbroken 6px vertical caps on West/East walls
- * - Proportional 6px top cap + 12px front face + 3px floor drop-shadow on horizontal walls
+ * - Shared 6px cap + 10px projected face profile for both cardinal orientations
+ * - Unified corner joints and restrained 2px contact shadows
  * - 7 coordinated wall material families: office (4), executive (11), monitoring (12), operations (14), painted (15), concrete (16), server
  * - Supports Glass Partitions (6), Windows (8), Wall Monitors (10), Door Frames (5), Columns (mask=0)
  * - Includes Automated Wall & Map Integrity Validator (validateSceneWalls)
@@ -11,6 +11,9 @@
 import { TILE_SIZE } from '../domain/worldConfig.js';
 
 export const WALL_TILE_IDS = new Set([4, 6, 8, 10, 11, 12, 14, 15, 16]);
+
+// Shared projected dimensions for both cardinal wall orientations.
+export const WALL_PROFILE = Object.freeze({ capDepth: 7, faceDepth: 12, shadowDepth: 2 });
 
 export const WALL_MATERIALS = {
   office: {
@@ -137,51 +140,70 @@ export function computeWallMask(grid, x, y) {
 
 function drawHorizontalFace(ctx, px, py, startX, width, mat, tileId, x, y, ts) {
   if (width <= 0) return;
-  const fy = py + 6;
+  const fy = py + WALL_PROFILE.capDepth;
+
   ctx.fillStyle = mat.faceTop;
   ctx.fillRect(px + startX, fy, width, 1);
   ctx.fillStyle = mat.faceFill;
-  ctx.fillRect(px + startX, fy + 1, width, 9);
+  ctx.fillRect(px + startX, fy + 1, width, WALL_PROFILE.faceDepth - 3);
 
   if (width >= 6) {
     ctx.fillStyle = mat.facePanel;
-    ctx.fillRect(px + startX + 1, fy + 3, width - 2, 5);
+    ctx.fillRect(px + startX + 1, fy + 4, width - 2, 4);
     ctx.fillStyle = mat.trim;
     ctx.fillRect(px + startX + 1, fy + 2, width - 2, 1);
   }
 
   ctx.fillStyle = mat.baseboard;
-  ctx.fillRect(px + startX, fy + 10, width, 2);
-
-  ctx.fillStyle = 'rgba(10, 13, 18, 0.30)';
-  ctx.fillRect(px + startX, fy + 12, width, 2);
-  ctx.fillStyle = 'rgba(10, 13, 18, 0.14)';
-  ctx.fillRect(px + startX, fy + 14, width, 1);
+  ctx.fillRect(px + startX, fy + WALL_PROFILE.faceDepth - 2, width, 2);
+  ctx.fillStyle = 'rgba(10, 13, 18, 0.22)';
+  ctx.fillRect(px + startX, fy + WALL_PROFILE.faceDepth, width, WALL_PROFILE.shadowDepth);
 
   if (tileId === 8 && width >= 12) {
     const wx = px + startX + Math.floor((width - 12) / 2);
     ctx.fillStyle = '#182028';
-    ctx.fillRect(wx, fy + 1, 12, 9);
+    ctx.fillRect(wx, fy + 1, 12, 7);
     ctx.fillStyle = '#3C6E85';
-    ctx.fillRect(wx + 1, fy + 2, 10, 6);
+    ctx.fillRect(wx + 1, fy + 2, 10, 4);
     ctx.fillStyle = '#75B8A8';
     ctx.fillRect(wx + 2, fy + 3, 3, 1);
-    ctx.fillRect(wx + 7, fy + 5, 3, 1);
+    ctx.fillRect(wx + 7, fy + 4, 3, 1);
     ctx.fillStyle = mat.trim;
-    ctx.fillRect(wx + 5, fy + 2, 1, 6);
-    ctx.fillRect(wx, fy + 8, 12, 1);
+    ctx.fillRect(wx + 5, fy + 2, 1, 4);
   } else if (tileId === 10 && width >= 12) {
     const mx = px + startX + Math.floor((width - 12) / 2);
     ctx.fillStyle = '#12161C';
-    ctx.fillRect(mx, fy + 1, 12, 9);
+    ctx.fillRect(mx, fy + 1, 12, 7);
     ctx.fillStyle = '#19323B';
-    ctx.fillRect(mx + 1, fy + 2, 10, 7);
+    ctx.fillRect(mx + 1, fy + 2, 10, 5);
     const barW = 3 + ((Math.floor((ts || 0) / 350) + x + y) % 6);
     ctx.fillStyle = '#75B8A8';
     ctx.fillRect(mx + 2, fy + 4, barW, 1);
     ctx.fillStyle = '#E3C77D';
     ctx.fillRect(mx + 2, fy + 6, 5, 1);
   }
+}
+
+function drawVerticalFace(ctx, px, py, startY, height, mat) {
+  if (height <= 0) return;
+  const fx = px + WALL_PROFILE.capDepth;
+
+  // The side face is wider than one floor tile's cap; its continuous fill and
+  // aligned inset panels stop vertical runs from reading as disconnected dashes.
+  ctx.fillStyle = mat.faceTop;
+  ctx.fillRect(fx, py + startY, 1, height);
+  ctx.fillStyle = mat.faceFill;
+  ctx.fillRect(fx + 1, py + startY, WALL_PROFILE.faceDepth - 3, height);
+  if (height >= 8) {
+    ctx.fillStyle = mat.facePanel;
+    ctx.fillRect(fx + 3, py + startY + 2, 4, Math.max(2, height - 4));
+    ctx.fillStyle = mat.trim;
+    ctx.fillRect(fx + 2, py + startY + 1, 1, Math.max(2, height - 2));
+  }
+  ctx.fillStyle = mat.baseboard;
+  ctx.fillRect(fx + WALL_PROFILE.faceDepth - 2, py + startY, 2, height);
+  ctx.fillStyle = 'rgba(10, 13, 18, 0.22)';
+  ctx.fillRect(fx + WALL_PROFILE.faceDepth, py + startY, WALL_PROFILE.shadowDepth, height);
 }
 
 function drawGlassTile(ctx, px, py, info) {
@@ -243,81 +265,69 @@ export function drawWallTile(ctx, grid, x, y, sceneId = 'cipher_hq', ts = 0) {
   const { mask, hasN, hasE, hasS, hasW, doorW, doorE } = info;
 
   if (mask === 0) {
-    ctx.fillStyle = 'rgba(10, 13, 18, 0.32)';
-    ctx.fillRect(px + 3, py + 14, 11, 3);
+    ctx.fillStyle = 'rgba(10, 13, 18, 0.28)';
+    ctx.fillRect(px + 6, py + 14, 10, WALL_PROFILE.shadowDepth);
     ctx.fillStyle = mat.capTop;
     ctx.fillRect(px + 3, py + 1, 10, 1);
     ctx.fillStyle = mat.capFill;
-    ctx.fillRect(px + 3, py + 2, 10, 4);
+    ctx.fillRect(px + 3, py + 2, 10, 3);
     ctx.fillStyle = mat.capBottom;
-    ctx.fillRect(px + 3, py + 6, 10, 1);
+    ctx.fillRect(px + 3, py + 5, 10, 1);
     ctx.fillStyle = mat.faceFill;
-    ctx.fillRect(px + 4, py + 7, 8, 7);
+    ctx.fillRect(px + 4, py + 6, 8, 8);
     ctx.fillStyle = mat.baseboard;
-    ctx.fillRect(px + 3, py + 14, 10, 2);
+    ctx.fillRect(px + 4, py + 14, 8, 2);
     return;
   }
 
   const hasHoriz = hasE || hasW;
   const hasVert = hasN || hasS;
 
+  // East-west runs: six-pixel top cap, ten-pixel projected front face.
   if (hasHoriz) {
     const faceStart = hasW ? 0 : 5;
     const faceEnd = hasE ? TILE_SIZE : 11;
     drawHorizontalFace(ctx, px, py, faceStart, faceEnd - faceStart, mat, tileId, x, y, ts);
-  } else if (hasN && !hasS) {
-    ctx.fillStyle = mat.faceFill;
-    ctx.fillRect(px + 5, py + 10, 6, 4);
-    ctx.fillStyle = mat.baseboard;
-    ctx.fillRect(px + 5, py + 14, 6, 2);
-    ctx.fillStyle = 'rgba(10, 13, 18, 0.24)';
-    ctx.fillRect(px + 5, py + 16, 6, 1);
-  }
 
-  if (hasHoriz) {
-    const capStart = hasW ? 0 : 5;
-    const capEnd = hasE ? TILE_SIZE : 11;
-    const cw = capEnd - capStart;
     ctx.fillStyle = mat.capTop;
-    ctx.fillRect(px + capStart, py, cw, 1);
+    ctx.fillRect(px + faceStart, py, faceEnd - faceStart, 1);
     ctx.fillStyle = mat.capFill;
-    ctx.fillRect(px + capStart, py + 1, cw, 4);
+    ctx.fillRect(px + faceStart, py + 1, faceEnd - faceStart, 4);
     ctx.fillStyle = mat.capBottom;
-    ctx.fillRect(px + capStart, py + 5, cw, 1);
+    ctx.fillRect(px + faceStart, py + 5, faceEnd - faceStart, 1);
   }
 
+  // North-south runs use the same cap and face dimensions, rotated 90 degrees.
   if (hasVert) {
-    const vyStart = 0;
-    const vyEnd = hasS ? TILE_SIZE : (hasHoriz ? 6 : 11);
-    const vh = vyEnd - vyStart;
-
-    ctx.fillStyle = 'rgba(10, 13, 18, 0.22)';
-    ctx.fillRect(px + 11, py + vyStart, 2, vh);
+    const faceStart = hasN ? 0 : 5;
+    const faceEnd = hasS ? TILE_SIZE : (hasHoriz ? WALL_PROFILE.capDepth : 11);
+    drawVerticalFace(ctx, px, py, faceStart, faceEnd - faceStart, mat);
 
     ctx.fillStyle = mat.capTop;
-    ctx.fillRect(px + 5, py + vyStart, 1, vh);
+    ctx.fillRect(px, py + faceStart, 1, faceEnd - faceStart);
     ctx.fillStyle = mat.capFill;
-    ctx.fillRect(px + 6, py + vyStart, 4, vh);
-    ctx.fillStyle = mat.sideEdge;
-    ctx.fillRect(px + 10, py + vyStart, 1, vh);
+    ctx.fillRect(px + 1, py + faceStart, 4, faceEnd - faceStart);
+    ctx.fillStyle = mat.capBottom;
+    ctx.fillRect(px + 5, py + faceStart, 1, faceEnd - faceStart);
+  }
 
-    if (!hasN) {
-      ctx.fillStyle = mat.capTop;
-      ctx.fillRect(px + 5, py, 6, 1);
-    }
-    if (!hasS && !hasHoriz) {
-      ctx.fillStyle = mat.capBottom;
-      ctx.fillRect(px + 5, py + 10, 6, 1);
-    }
+  // A shared corner joint hides seams where the two wall directions meet.
+  if (hasHoriz && hasVert) {
+    ctx.fillStyle = mat.capTop;
+    ctx.fillRect(px, py, WALL_PROFILE.capDepth, WALL_PROFILE.capDepth);
+    ctx.fillStyle = mat.capFill;
+    ctx.fillRect(px + 1, py + 1, WALL_PROFILE.capDepth - 2, WALL_PROFILE.capDepth - 2);
+    ctx.fillStyle = mat.capBottom;
+    ctx.fillRect(px + 1, py + 5, WALL_PROFILE.capDepth - 1, 1);
   }
 
   if (doorE) {
     ctx.fillStyle = mat.trim;
-    ctx.fillRect(px + 14, py, 2, 16);
+    ctx.fillRect(px + 14, py, 2, TILE_SIZE);
   }
   if (doorW) {
     ctx.fillStyle = mat.trim;
-    ctx.fillRect(px, py, 2, 16);
+    ctx.fillRect(px, py, 2, TILE_SIZE);
   }
 }
 
@@ -366,6 +376,63 @@ export function drawDoorFrame(ctx, grid, x, y, sceneId = 'cipher_hq') {
       ctx.fillRect(px + 13, py + 2, 1, 13);
     }
   }
+}
+
+
+/**
+ * Draws a complete door leaf inside a wall opening. The frame is architectural,
+ * while the leaf clearly communicates open/closed/locked state at every scale.
+ */
+export function drawDoorPanel(ctx, door, state = 'open', tileSize = TILE_SIZE) {
+  if (!ctx || !door) return;
+  const x = door.x * tileSize;
+  const y = door.y * tileSize;
+  const width = Math.max(1, door.widthTiles || 1) * tileSize;
+  const top = y - 11;
+  const innerX = x + 4;
+  const innerWidth = Math.max(8, width - 8);
+
+  ctx.save();
+  // Dark recessed opening and continuous upper/lower frame.
+  ctx.fillStyle = '#111A22';
+  ctx.fillRect(innerX, top + 3, innerWidth, 17);
+  ctx.fillStyle = '#66798A';
+  ctx.fillRect(x, top, width, 3);
+  ctx.fillStyle = '#A7B8C2';
+  ctx.fillRect(x + 2, top + 3, width - 4, 1);
+  ctx.fillStyle = '#344451';
+  ctx.fillRect(x, top + 18, width, 3);
+  ctx.fillStyle = '#8B9BA5';
+  ctx.fillRect(x, top + 2, 3, 17);
+  ctx.fillRect(x + width - 3, top + 2, 3, 17);
+
+  if (state === 'closed' || state === 'locked') {
+    ctx.fillStyle = state === 'locked' ? '#49333A' : '#344956';
+    ctx.fillRect(innerX + 1, top + 4, innerWidth - 2, 13);
+    ctx.fillStyle = state === 'locked' ? '#75454B' : '#466477';
+    ctx.fillRect(innerX + 3, top + 6, innerWidth - 6, 9);
+    ctx.fillStyle = '#A7B8C2';
+    ctx.fillRect(x + Math.floor(width / 2), top + 5, 1, 11);
+    ctx.fillStyle = '#D7B86F';
+    ctx.fillRect(x + width - 9, top + 10, 2, 2);
+    if (state === 'locked') {
+      ctx.fillStyle = '#C96C68';
+      ctx.fillRect(x + width - 5, top + 4, 3, 3);
+    }
+  } else {
+    // Threshold remains visible; the hinged leaf is folded against one jamb.
+    ctx.fillStyle = 'rgba(117, 184, 168, 0.28)';
+    ctx.fillRect(innerX + 2, top + 5, innerWidth - 4, 11);
+    ctx.fillStyle = '#42616A';
+    ctx.fillRect(innerX + 1, top + 4, 7, 13);
+    ctx.fillStyle = '#6F9296';
+    ctx.fillRect(innerX + 2, top + 5, 4, 11);
+    ctx.fillStyle = '#D7B86F';
+    ctx.fillRect(innerX + 5, top + 10, 1, 2);
+    ctx.fillStyle = state === 'unlocked' ? '#75B8A8' : '#779B70';
+    ctx.fillRect(x + width - 6, top + 5, 3, 3);
+  }
+  ctx.restore();
 }
 
 export function validateSceneWalls(scene) {

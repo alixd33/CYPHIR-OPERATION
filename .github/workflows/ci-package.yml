@@ -1,0 +1,47 @@
+name: CIPHER verification and package
+
+on:
+  push:
+    branches:
+      - work/atrium-visual-slice
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify JavaScript syntax
+        run: |
+          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          find src tests -type f -name '*.mjs' -print0 | xargs -0 -n1 node --check
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Package complete project
+        run: |
+          zip -qr "$RUNNER_TEMP/OPERATION-CIPHER-v2.2.8-visual-slice.zip" . \
+            -x './.git/*' './node_modules/*' '*/node_modules/*' \
+               './operation-cipher-v2.2.8.zip'
+
+      - name: Upload project ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: OPERATION-CIPHER-v2.2.8-visual-slice
+          path: ${{ runner.temp }}/OPERATION-CIPHER-v2.2.8-visual-slice.zip
+          if-no-files-found: error
+          retention-days: 14
